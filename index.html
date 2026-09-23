@@ -22,7 +22,10 @@ html, body { height:100%; background:var(--bg); color:var(--text); -webkit-tap-h
   font-family:"InterE",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
 body { display:flex; align-items:center; justify-content:center; min-height:100%; }
 button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
-.player { position:relative; width:min(100vw, calc(100vh * 16 / 9)); }
+.player { position:relative; width:min(100vw, calc((100vh - 64px) * 16 / 9)); }
+.player:fullscreen { width:100vw; height:100vh; display:flex; flex-direction:column; justify-content:center; background:var(--bg); }
+.player:fullscreen .stage { width:min(100vw, calc((100vh - 64px) * 16 / 9)); margin:0 auto; }
+.player:fullscreen .hud { width:min(100vw, calc((100vh - 64px) * 16 / 9)); margin:0 auto; }
 .stage { position:relative; width:100%; aspect-ratio:16/9; background:var(--bg); overflow:hidden; cursor:pointer; }
 .stage.idle { cursor:none; }
 canvas { display:block; width:100%; height:100%; }
@@ -31,10 +34,8 @@ canvas { display:block; width:100%; height:100%; }
 .bigplay:hover { transform:scale(1.06); }
 .bigplay svg { width:36px; height:36px; fill:var(--bg); }
 .bigplay[hidden] { display:none; }
-.hud { position:absolute; left:0; right:0; bottom:0; padding:22px 20px 8px;
-  background:linear-gradient(to top, rgba(11,16,32,.72), rgba(11,16,32,0));
-  transition:opacity .45s var(--ease), transform .45s var(--ease); }
-.hud.hidden { opacity:0; transform:translateY(8px); pointer-events:none; }
+.hud { height:64px; padding:6px 4px 0; transition:opacity .45s var(--ease); }
+.hud.hidden { opacity:0; pointer-events:none; }
 .track { position:relative; height:18px; cursor:pointer; touch-action:none; }
 .rail { position:absolute; left:0; right:0; top:7px; height:3px; border-radius:2px; background:rgba(238,241,247,.18);
   transition:height .25s var(--ease), top .25s var(--ease); overflow:hidden; }
@@ -58,7 +59,7 @@ canvas { display:block; width:100%; height:100%; }
 @media (orientation:portrait) and (max-width:760px) {
   body { align-items:flex-start; }
   .player { width:100vw; padding-top:max(16px, env(safe-area-inset-top)); }
-  .hud { position:static; background:none; padding:12px 16px 0; opacity:1 !important; transform:none !important; pointer-events:auto !important; }
+  .hud { height:auto; padding:12px 16px 0; opacity:1 !important; pointer-events:auto !important; }
   .mpanel { display:block; padding:20px 20px 32px; }
   .mchap { font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:8px; }
   .mchap::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--accent); }
@@ -661,7 +662,7 @@ $("play").onclick = toggle;
 $("replay").onclick = () => { T = 0; play(); };
 $("sound").onclick = () => { soundOn = !soundOn; $("soundWave").setAttribute("d", soundOn ? "M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10" : "M16 9l5 6M21 9l-5 6");
   $("sound").setAttribute("aria-label", soundOn ? "Couper le son" : "Activer le son"); if (soundOn) beep(880); };
-$("fs").onclick = async () => { const el = $("stage");
+$("fs").onclick = async () => { const el = $("player");
   if (document.fullscreenElement) return document.exitFullscreen();
   try { await el.requestFullscreen(); if (screen.orientation && screen.orientation.lock) await screen.orientation.lock("landscape"); } catch (e) {} };
 document.addEventListener("fullscreenchange", () => layout());
