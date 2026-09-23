@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C'est quoi l'IA ? · Cours 1 minute</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="Cours vidéo d'une minute, animé en JavaScript : c'est quoi l'intelligence artificielle ?">
+<style>
+  :root { --paper:#F4ECDD; --ink:#1F1B2D; --accent:#E4572E; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; background:var(--ink); color:var(--paper);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; }
+  body { display:flex; align-items:center; justify-content:center; min-height:100%; }
+  .player { width:min(100vw, calc((100vh - 60px) * 16 / 9)); }
+  .stage { position:relative; width:100%; aspect-ratio:16/9; background:var(--paper); overflow:hidden; }
+  canvas { display:block; width:100%; height:100%; }
+  .overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(31,27,45,.30); border:0; cursor:pointer; color:#fff; font:inherit; }
+  .overlay[hidden] { display:none; }
+  .overlay span { display:flex; align-items:center; gap:.55em; background:var(--accent); padding:.7em 1.3em;
+    border-radius:999px; font-weight:800; font-size:clamp(15px,2.4vw,30px); box-shadow:0 .22em 0 var(--ink); }
+  .overlay span::before { content:""; border-style:solid; border-width:.5em 0 .5em .8em;
+    border-color:transparent transparent transparent #fff; }
+  .bar { display:flex; align-items:center; gap:10px; height:60px; padding:0 12px; }
+  .bar button { background:none; border:2px solid rgba(244,236,221,.35); color:var(--paper); border-radius:8px;
+    height:38px; min-width:46px; padding:0 12px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; }
+  .bar button:hover { border-color:var(--paper); }
+  .track { position:relative; flex:1; height:30px; cursor:pointer; touch-action:none; }
+  .track .rail { position:absolute; left:0; right:0; top:12px; height:6px; border-radius:3px; background:rgba(244,236,221,.2); }
+  .track .fill { position:absolute; left:0; top:12px; height:6px; border-radius:3px; background:var(--accent); width:0; }
+  .track .mark { position:absolute; top:8px; width:2px; height:14px; background:rgba(244,236,221,.55); }
+  .time { font-variant-numeric:tabular-nums; font-size:14px; min-width:84px; text-align:right; opacity:.85; }
+  .sub { display:none; padding:14px 16px 4px; font-size:19px; line-height:1.35; font-weight:650; min-height:4.2em; }
+  @media (orientation:portrait) and (max-width:760px) {
+    body { align-items:flex-start; padding-top:8vh; }
+    .sub { display:block; }
+  }
+</style>
+</head>
+<body>
+<div class="player">
+  <div class="stage">
+    <canvas id="cv" width="1920" height="1080" aria-label="Animation : c'est quoi l'IA ?"></canvas>
+    <button class="overlay" id="overlay"><span id="overlayLabel">Lancer le cours · 1 min</span></button>
+  </div>
+  <div class="bar">
+    <button id="play" aria-label="Lecture">Lecture</button>
+    <div class="track" id="track"><div class="rail"></div><div class="fill" id="fill"></div></div>
+    <span class="time" id="time">0:00 / 1:00</span>
+    <button id="sound" aria-label="Activer le son">Son : off</button>
+  </div>
+  <div class="sub" id="sub" aria-live="polite"></div>
+</div>
+
+<script>
+/* =====================================================================
+   1) SCRIPT — le seul bloc à réécrire pour un nouvel épisode.
+      Chaque scène : fenêtre [start,end] en secondes, un visuel (clé de
+      VISUALS plus bas), des « beats » = sous-titres horodatés, et les
+      données propres au visuel (data).
+   ===================================================================== */
+const SCRIPT = {
+  meta: {
+    series: "Cours 1 minute",
+    episode: 1,
+    title: "C'est quoi l'IA ?",
+    duration: 60,
+    next: "Prochain épisode : la crypto",
+    palette: { paper:"#F4ECDD", card:"#FFFBF3", ink:"#1F1B2D", accent:"#E4572E",
+               teal:"#1F8A83", sun:"#F2B541", soft:"#E3D5BD", muted:"#6E6456" }
+  },
+  scenes: [
+    { id:"hook", label:"L'accroche", start:0, end:7, visual:"phoneTyping",
+      beats: [
+        { at:0.0, text:"Ton téléphone devine le mot que tu vas taper." },
+        { at:3.6, text:"Il ne lit pas dans tes pensées. Alors, comment ?" }
+      ],
+      data: { contact:"Léa", received:"Dispo cette semaine ?", typed:"On se voit",
+              barsTitle:"Ce que calcule ton téléphone :", barsSub:"probabilité du mot suivant",
+              suggestions:[["demain",46],["ce soir",31],["jeudi",12]] } },
+
+    { id:"definition", label:"La définition", start:7, end:20, visual:"rulesVsExamples",
+      beats: [
+        { at:7.0,  text:"L'IA, c'est un programme qui apprend à partir d'exemples." },
+        { at:12.0, text:"Avant, on écrivait toutes les règles à la main…" },
+        { at:15.6, text:"Avec l'IA, on montre des millions d'exemples, et elle trouve les règles seule." }
+      ],
+      data: {
+        stations:["Des exemples","Le programme apprend","Il en tire des règles"],
+        rules:["trop de liens → spam","« URGENT » → spam","ami connu → pas spam"],
+        oldTitle:"Avant : on écrit les règles", newTitle:"IA : on montre des exemples",
+        code:["si le mail contient « gratuit »","→ alors spam","sinon si l'expéditeur est inconnu","→ alors… spam ?","sauf si c'est ta banque","sauf si… sauf si… sauf si…"],
+        stamp:"Impossible de tout prévoir", counterTo:1000000, counterLabel:"exemples", found:"Elle en déduit les règles seule" } },
+
+    { id:"mechanics", label:"La mécanique", start:20, end:40, visual:"training",
+      beats: [
+        { at:20.0, text:"1. Des données : des milliers de mails déjà étiquetés." },
+        { at:25.0, text:"2. L'apprentissage : le réseau ajuste ses réglages pour faire moins d'erreurs." },
+        { at:31.0, text:"À chaque passage, la frontière entre spam et pas spam se précise." },
+        { at:35.5, text:"3. La prédiction : face à un mail inconnu, il parie sur le plus probable." }
+      ],
+      data: {
+        classes:["spam","ok"], axisX:"nombre de liens →", axisY:"mots urgents →", netTitle:"Réseau de neurones",
+        netSub:"des milliers de réglages", trainLabel:"Entraînement", newLabel:"Nouveau mail",
+        newSubject:"Offre exclusive, cliquez vite !", verdict:"spam à 94 %",
+        cards:[["Gagnez 1000 € !!!",1],["Réunion demain 10 h",0],["URGENT : votre colis",1],["Photos du week-end",0],
+               ["Crédit gratuit, vite",1],["Facture de septembre",0],["Cliquez ici maintenant",1],["Anniversaire de Tom",0]] } },
+
+    { id:"nuance", label:"La nuance", start:40, end:52, visual:"limits",
+      beats: [
+        { at:40.0, text:"Attention : l'IA ne comprend pas ce qu'elle dit." },
+        { at:44.0, text:"Ni conscience, ni intention. Juste des probabilités." },
+        { at:48.0, text:"Et si ses données sont biaisées, ses réponses le seront aussi." }
+      ],
+      data: {
+        prompt:"Le chat dort sur le …", completions:[["canapé",38],["lit",27],["tapis",19]],
+        aside:"Elle ne sait pas ce qu'est un chat.",
+        checklist:[["Comprendre le sens",false,0.4],["Avoir une conscience",false,4.1],["Vouloir quelque chose",false,4.7],["Calculer des probabilités",true,5.6]],
+        biasAt:8.1, dataTitle:"Données d'entraînement", dataNote:"90 % du même profil",
+        outTitle:"Ses recommandations", outNote:"le même profil, encore et encore", stamp:"BIAIS" } },
+
+    { id:"outro", label:"À retenir", start:52, end:60, visual:"outro", caption:false,
+      beats: [
+        { at:52.0, text:"L'IA ne pense pas. Elle prédit." },
+        { at:55.5, text:"Et elle ne vaut que ce qu'on lui a appris." }
+      ],
+      data: { line1:"L'IA ne pense pas.", line2:"Elle prédit.", sub:"Et elle ne vaut que ce qu'on lui a appris.",
+              recap:["Données","Motifs","Prédiction"] } }
+  ]
+};
+
+/* =====================================================================
+   2) MOTEUR — générique : horloge, fond, en-tête, sous-titres,
+      transitions, primitives de dessin, son, contrôles.
+   ===================================================================== */
+const W = 1920, H = 1080;
+const P = SCRIPT.meta.palette;
+const DUR = SCRIPT.meta.duration;
+const FONT = 'system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+const MONO = 'ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace';
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+let K = 1; // pixels réels par unité logique
+
+// --- maths ---
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const seg = (v, a, b) => clamp01((v - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const eOut = k => 1 - Math.pow(1 - k, 3);
+const eInOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const eBack = k => { const c = 1.70158; return k <= 0 ? 0 : 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a;
+  t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+// --- typographie (espaces insécables français avant : ; ? ! % et après «) ---
+const fr = s => s.replace(/ ([:;?!»%€])/g, " $1").replace(/« /g, "« ");
+function setFont(size, weight = 700, family = FONT) { ctx.font = `${weight} ${size}px ${family}`; }
+function wrap(text, maxW) {
+  const words = fr(text).split(" "), lines = []; let cur = "";
+  for (const w of words) { const test = cur ? cur + " " + w : w;
+    if (cur && ctx.measureText(test).width > maxW) { lines.push(cur); cur = w; } else cur = test; }
+  if (cur) lines.push(cur); return lines;
+}
+function fit(text, maxW, maxLines, size, weight = 700, min = 18, family = FONT) {
+  for (let s = size; s >= min; s -= 2) { setFont(s, weight, family); const l = wrap(text, maxW);
+    if (l.length <= maxLines && l.every(x => ctx.measureText(x).width <= maxW)) return { lines:l, size:s }; }
+  setFont(min, weight, family); return { lines:wrap(text, maxW), size:min };
+}
+// Dessine un bloc de texte ajusté ; align = left|center|right ; y = haut du bloc (ou centre si vcenter)
+function text(str, x, y, o = {}) {
+  const f = fit(str, o.maxW || 1600, o.maxLines || 1, o.size || 40, o.weight || 700, o.min || 18, o.family || FONT);
+  const lh = f.size * (o.lh || 1.2), total = f.lines.length * lh;
+  let yy = o.vcenter ? y - total / 2 : y;
+  ctx.fillStyle = o.color || P.ink; ctx.textAlign = o.align || "left"; ctx.textBaseline = "top";
+  const chars = o.reveal == null ? Infinity : o.reveal;
+  let used = 0;
+  for (const l of f.lines) { const n = Math.max(0, Math.min(l.length, chars - used)); used += l.length + 1;
+    if (n > 0) ctx.fillText(l.slice(0, n), x, yy + f.size * 0.08); yy += lh; }
+  return { h:total, size:f.size, lines:f.lines };
+}
+
+// --- primitives ---
+function rr(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function card(x, y, w, h, o = {}) {
+  const r = o.r == null ? 18 : o.r, sh = o.shadow == null ? 8 : o.shadow;
+  if (sh) { ctx.fillStyle = o.shadowColor || P.ink; rr(x + sh, y + sh, w, h, r); ctx.fill(); }
+  ctx.fillStyle = o.fill || P.card; rr(x, y, w, h, r); ctx.fill();
+  if (o.stroke !== false) { ctx.lineWidth = o.lw || 4; ctx.strokeStyle = o.stroke || P.ink; ctx.stroke(); }
+}
+function circle(x, y, r, fill, stroke, lw = 3) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.lineWidth = lw; ctx.strokeStyle = stroke; ctx.stroke(); } }
+function line(x1, y1, x2, y2, color = P.ink, lw = 4) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.stroke(); }
+function arrow(x1, y1, x2, y2, k = 1, color = P.ink, lw = 6) {
+  if (k <= 0) return; const x = lerp(x1, x2, k), y = lerp(y1, y2, k); line(x1, y1, x, y, color, lw);
+  const a = Math.atan2(y2 - y1, x2 - x1), s = 18; ctx.beginPath(); ctx.moveTo(x, y);
+  ctx.lineTo(x - s * Math.cos(a - .5), y - s * Math.sin(a - .5)); ctx.moveTo(x, y);
+  ctx.lineTo(x - s * Math.cos(a + .5), y - s * Math.sin(a + .5)); ctx.stroke(); }
+function check(x, y, s, k, color = P.teal, lw = 9) { if (k <= 0) return; ctx.beginPath();
+  const p = [[x - s * .5, y], [x - s * .12, y + s * .38], [x + s * .55, y - s * .42]];
+  ctx.moveTo(p[0][0], p[0][1]); const k1 = clamp01(k * 2), k2 = clamp01(k * 2 - 1);
+  ctx.lineTo(lerp(p[0][0], p[1][0], k1), lerp(p[0][1], p[1][1], k1));
+  if (k2 > 0) ctx.lineTo(lerp(p[1][0], p[2][0], k2), lerp(p[1][1], p[2][1], k2));
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); }
+function cross(x, y, s, k, color = P.accent, lw = 9) { const k1 = clamp01(k * 2), k2 = clamp01(k * 2 - 1);
+  if (k1 > 0) line(x - s / 2, y - s / 2, lerp(x - s / 2, x + s / 2, k1), lerp(y - s / 2, y + s / 2, k1), color, lw);
+  if (k2 > 0) line(x + s / 2, y - s / 2, lerp(x + s / 2, x - s / 2, k2), lerp(y - s / 2, y + s / 2, k2), color, lw); }
+function envelope(x, y, w, h, color) { ctx.fillStyle = color; rr(x, y, w, h, 5); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 4, y + 5); ctx.lineTo(x + w / 2, y + h * .58); ctx.lineTo(x + w - 4, y + 5);
+  ctx.strokeStyle = P.card; ctx.lineWidth = 3; ctx.lineJoin = "round"; ctx.stroke(); }
+function person(cx, cy, s, color) { circle(cx, cy - s * .42, s * .26, color);
+  ctx.fillStyle = color; rr(cx - s * .42, cy - s * .08, s * .84, s * .6, s * .28); ctx.fill(); }
+function chip(x, y, label, color, size = 22, fg = P.card) { setFont(size, 800); const w = ctx.measureText(label).width + size * 1.1;
+  ctx.fillStyle = color; rr(x, y, w, size * 1.55, size * .78); ctx.fill(); ctx.fillStyle = fg; ctx.textAlign = "left";
+  ctx.textBaseline = "middle"; ctx.fillText(label, x + size * .55, y + size * .8); return w; }
+function withAlpha(a, fn) { if (a <= 0) return; ctx.save(); ctx.globalAlpha *= a; fn(); ctx.restore(); }
+function popAt(lt, t0, d = .45) { return eBack(seg(lt, t0, t0 + d)); }
+function scaled(cx, cy, s, fn) { if (s <= 0) return; ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy); fn(); ctx.restore(); }
+
+// --- glitch : recopie de bandes décalées + franges colorées (déterministe par temps) ---
+function glitch(x, y, w, h, amp, t) {
+  const r = rng(Math.floor(t * 18) * 7919 + 13);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  for (let i = 0; i < 9; i++) { const sy = y + r() * h, sh = 6 + r() * 34, off = (r() - .5) * 2 * amp;
+    const hh = Math.min(sh, y + h - sy); if (hh <= 1) continue;
+    ctx.drawImage(cv, x * K, sy * K, w * K, hh * K, (x + off) * K, sy * K, w * K, hh * K); }
+  ctx.restore();
+  for (let i = 0; i < 5; i++) { const sy = y + r() * h; ctx.fillStyle = r() < .5 ? "rgba(228,87,46,.35)" : "rgba(31,138,131,.35)";
+    ctx.fillRect(x + r() * w * .6, sy, w * (.15 + r() * .4), 3 + r() * 10); }
+  ctx.fillStyle = "rgba(31,27,45,.06)"; for (let yy = y; yy < y + h; yy += 6) ctx.fillRect(x, yy, w, 2);
+}
+
+// --- fond papier ---
+const grain = (() => { const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d"); const r = rng(42);
+  for (let i = 0; i < 2600; i++) { g.fillStyle = r() < .5 ? "rgba(31,27,45,.05)" : "rgba(255,255,255,.35)"; g.fillRect(r() * 256, r() * 256, 1 + r() * 2, 1 + r() * 2); }
+  return c; })();
+const DECO = [[1700, 180, 260, "sun"], [200, 900, 300, "soft"], [1750, 950, 280, "sun"], [150, 180, 240, "soft"], [960, 540, 560, "soft"]];
+function background(si, t) {
+  ctx.fillStyle = P.paper; ctx.fillRect(0, 0, W, H);
+  const d = DECO[si % DECO.length]; ctx.globalAlpha = .45;
+  circle(d[0] + Math.sin(t * .4) * 12, d[1] + Math.cos(t * .3) * 12, d[2], P[d[3]]); ctx.globalAlpha = 1;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = ctx.createPattern(grain, "repeat"); ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore();
+}
+
+// --- en-tête, sous-titres, transitions ---
+const num = i => String(i + 1).padStart(2, "0");
+function header(s) {
+  setFont(26, 800); const label = `${num(s.index)} · ${s.label.toUpperCase()}`; const w = ctx.measureText(label).width + 44;
+  ctx.fillStyle = P.ink; rr(56, 40, w, 54, 27); ctx.fill(); ctx.fillStyle = P.paper; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillText(label, 78, 68);
+  setFont(26, 650); ctx.fillStyle = P.muted; ctx.textAlign = "right"; ctx.fillText(`${SCRIPT.meta.series} · ${SCRIPT.meta.title}`, 1864, 68);
+}
+function beatAt(s, t) { let b = s.beats[0], i = 0; s.beats.forEach((x, j) => { if (t >= x.at) { b = x; i = j; } }); return { b, i }; }
+function caption(s, t) {
+  if (s.caption === false) return;
+  const { b } = beatAt(s, t), bt = t - b.at, a = eOut(seg(bt, 0, .3));
+  const x = 150, y = 868 + (1 - a) * 20, w = 1620, h = 170;
+  withAlpha(a, () => {
+    card(x, y, w, h, { r:24, shadow:10, fill:P.card });
+    ctx.fillStyle = P.accent; rr(x + 26, y + 30, 10, h - 60, 5); ctx.fill();
+    text(b.text, x + 70, y + h / 2, { maxW:w - 120, maxLines:2, size:56, min:34, weight:750, vcenter:true, reveal:bt * 75 });
+  });
+}
+function transition(t) {
+  SCRIPT.scenes.forEach((s, i) => { if (!i) return; const u = seg(t, s.start - .38, s.start + .38); if (u <= 0 || u >= 1) return;
+    const l = u < .5 ? -W + W * eInOut(u * 2) : W * eInOut((u - .5) * 2), r = l + W;
+    ctx.save(); ctx.beginPath(); ctx.rect(l, 0, W, H); ctx.clip();
+    ctx.fillStyle = P.ink; ctx.fillRect(0, 0, W, H); ctx.fillStyle = P.accent; ctx.fillRect(0, H - 26, W, 26);
+    setFont(260, 900); ctx.fillStyle = P.accent; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(num(i), W / 2, H / 2 - 70);
+    setFont(72, 800); ctx.fillStyle = P.paper; ctx.fillText(s.label, W / 2, H / 2 + 110);
+    ctx.restore(); });
+}
+
+/* =====================================================================
+   3) VISUELS — un visuel = fonction (lt = temps local de scène, s = scène).
+      Réutilisables d'un épisode à l'autre en changeant s.data.
+   ===================================================================== */
+const VISUALS = {};
+
+VISUALS.phoneTyping = (lt, s) => {
+  const d = s.data, enter = eOut(seg(lt, 0, .6));
+  const px = 430, py = 140 + (1 - enter) * 80, pw = 380, ph = 690;
+  withAlpha(enter, () => {
+    card(px, py, pw, ph, { r:52, fill:P.ink, shadow:12, shadowColor:P.accent });
+    const sx = px + 16, sy = py + 16, sw = pw - 32, sh = ph - 32;
+    ctx.fillStyle = P.card; rr(sx, sy, sw, sh, 38); ctx.fill();
+    ctx.fillStyle = P.ink; rr(px + pw / 2 - 50, sy + 10, 100, 20, 10); ctx.fill();
+    circle(sx + 44, sy + 72, 22, P.sun); text(d.contact, sx + 78, sy + 56, { size:28, weight:800 });
+    line(sx + 16, sy + 110, sx + sw - 16, sy + 110, P.soft, 3);
+    // bulle reçue
+    setFont(24, 600); const bw = Math.min(sw - 60, ctx.measureText(d.received).width + 40);
+    ctx.fillStyle = P.soft; rr(sx + 18, sy + 136, bw, 58, 22); ctx.fill();
+    text(d.received, sx + 38, sy + 150, { size:24, weight:600, maxW:bw - 40 });
+    // clavier AZERTY
+    const kh = 236, ky = sy + sh - kh - 16, rows = ["azertyuiop", "qsdfghjklm", "wxcvbn"];
+    const kw = (sw - 20 - 9 * 5) / 10, n = Math.floor(seg(lt, .4, 1.9) * d.typed.length);
+    const lastCh = n > 0 ? d.typed[n - 1].toLowerCase() : null, pressed = lt < 2.05 && lt > .4 && ((lt - .4) / (1.5 / d.typed.length)) % 1 < .55;
+    rows.forEach((row, ri) => { const rw = row.length * kw + (row.length - 1) * 5, rx = sx + (sw - rw) / 2;
+      [...row].forEach((c, ci) => { const x = rx + ci * (kw + 5), y = ky + ri * 56, on = pressed && c === lastCh;
+        ctx.fillStyle = on ? P.accent : "#EDE3D2"; rr(x, y, kw, 48, 8); ctx.fill();
+        setFont(22, 700); ctx.fillStyle = on ? P.card : P.ink; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(c, x + kw / 2, y + 25); }); });
+    ctx.fillStyle = pressed && lastCh === " " ? P.accent : "#EDE3D2"; rr(sx + sw * .22, ky + 3 * 56, sw * .56, 44, 8); ctx.fill();
+    // suggestions
+    const sgY = ky - 64, a = eOut(seg(lt, 1.9, 2.3));
+    withAlpha(a, () => { const cw = (sw - 36) / 3;
+      d.suggestions.forEach(([w], i) => { const x = sx + 12 + i * (cw + 6), hi = i === 0 && lt > 2.6;
+        ctx.fillStyle = hi ? P.accent : "#EDE3D2"; rr(x, sgY, cw, 48, 12); ctx.fill();
+        text(w, x + cw / 2, sgY + 24, { size:22, weight:800, align:"center", vcenter:true, maxW:cw - 12, color:hi ? P.card : P.ink }); }); });
+    // champ de saisie
+    const iy = sgY - 84; ctx.lineWidth = 3; ctx.strokeStyle = P.ink; rr(sx + 12, iy, sw - 24, 62, 31); ctx.stroke();
+    setFont(28, 650); const typed = d.typed.slice(0, n); ctx.fillStyle = P.ink; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(typed, sx + 34, iy + 32);
+    if (Math.floor(lt * 2.2) % 2 === 0) { const cx = sx + 36 + ctx.measureText(typed).width; line(cx, iy + 16, cx, iy + 48, P.accent, 3); }
+  });
+  // barres de probabilités
+  const bx = 960; const ta = eOut(seg(lt, 2.0, 2.5));
+  withAlpha(ta, () => { text(d.barsTitle, bx, 230, { size:44, weight:800, maxW:860 }); text(d.barsSub, bx, 292, { size:30, weight:600, color:P.muted, maxW:860 }); });
+  d.suggestions.forEach(([w, pct], i) => { const k = eOut(seg(lt, 2.3 + i * .25, 3.1 + i * .25)); if (k <= 0) return; const y = 380 + i * 104;
+    withAlpha(k, () => { text(w, bx, y, { size:44, weight:800, maxW:250 });
+      const bw = 460 * pct / 50 * k; ctx.fillStyle = i ? P.soft : P.accent; rr(1230, y + 4, Math.max(bw, 8), 50, 12); ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = P.ink; ctx.stroke(); text(Math.round(pct * k) + " %", 1230 + bw + 18, y + 6, { size:40, weight:800 }); }); });
+  // point d'interrogation
+  const q = popAt(lt, 3.7, .5);
+  scaled(1660, 720, q, () => { ctx.save(); ctx.translate(1660, 720); ctx.rotate(Math.sin(lt * 3) * .08); ctx.translate(-1660, -720);
+    circle(1668, 728, 84, P.ink); circle(1660, 720, 84, P.sun, P.ink, 5); setFont(120, 900); ctx.fillStyle = P.ink; ctx.textAlign = "center";
+    ctx.textBaseline = "middle"; ctx.fillText("?", 1660, 728); ctx.restore(); });
+};
+
+VISUALS.rulesVsExamples = (lt, s) => {
+  const d = s.data;
+  // Phase A : exemples -> programme -> règles
+  const aA = eOut(seg(lt, 0, .5)) * (1 - seg(lt, 4.7, 5.2));
+  withAlpha(aA, () => {
+    const cy = 470;
+    for (let i = 2; i >= 0; i--) { card(250 - i * 14, cy - 90 - i * 14, 220, 150, { r:14, shadow:6 }); }
+    envelope(300, cy - 50, 90, 64, P.accent); text("exemple", 250 + 110 - 28, cy + 26, { size:22, weight:700, color:P.muted, align:"center" });
+    card(770, cy - 150, 380, 300, { fill:P.ink, r:26, shadow:10, shadowColor:P.accent });
+    text("Programme", 960, cy - 124, { size:32, weight:800, color:P.paper, align:"center" });
+    const layers = [3, 4, 2]; layers.forEach((n, li) => { for (let j = 0; j < n; j++) { const x = 860 + li * 100, y = cy + 20 + (j - (n - 1) / 2) * 52;
+      const g = .5 + .5 * Math.sin(lt * 6 - li * 1.4 + j); circle(x, y, 15, g > .6 ? P.sun : "#4A4460"); } });
+    for (let i = 0; i < 16; i++) { const t0 = .3 + i * .3, k = seg(lt, t0, t0 + 1); if (k <= 0 || k >= 1) continue;
+      const x = lerp(480, 790, eInOut(k)), y = cy - 20 + Math.sin(i * 2.1) * 50 * (1 - k); withAlpha(1 - seg(k, .8, 1), () => envelope(x - 36, y - 24, 72, 48, i % 2 ? P.teal : P.accent)); }
+    arrow(1170, cy, 1330, cy, eOut(seg(lt, 1.2, 1.8)));
+    withAlpha(eOut(seg(lt, 1.4, 1.8)), () => { card(1350, cy - 150, 440, 300, { r:22 }); text("Règles trouvées", 1570, cy - 126, { size:32, weight:800, align:"center" });
+      d.rules.forEach((r, i) => { const k = seg(lt, 1.9 + i * .7, 2.4 + i * .7); if (k <= 0) return; check(1392, cy - 50 + i * 72, 30, k, P.teal, 7);
+        withAlpha(k, () => text(r, 1420, cy - 68 + i * 72, { size:28, weight:700, maxW:350, min:20 })); }); });
+    d.stations.forEach((st, i) => text(st, [360, 960, 1570][i], 690, { size:34, weight:800, align:"center", maxW:420, color:i === 1 ? P.accent : P.ink }));
+  });
+  // Phase B : avant / IA
+  const aB = eOut(seg(lt, 5.1, 5.7)); if (aB <= 0) return;
+  withAlpha(aB, () => {
+    card(130, 150 + (1 - aB) * 40, 800, 670, { r:24 });
+    text(d.oldTitle, 170, 180, { size:40, weight:800, maxW:720 });
+    ctx.fillStyle = P.ink; rr(170, 250, 720, 520, 16); ctx.fill();
+    d.code.forEach((c, i) => { const k = seg(lt, 5.6 + i * .45, 5.9 + i * .45); if (k <= 0) return;
+      text(c, 200, 280 + i * 76, { size:32, weight:600, family:MONO, maxW:670, min:20, color:i % 2 ? P.sun : P.paper, reveal:k * c.length }); });
+    const st = popAt(lt, 8.3, .4);
+    scaled(530, 520, st, () => { ctx.save(); ctx.translate(530, 520); ctx.rotate(-.12);
+      setFont(50, 900); const w = ctx.measureText(fr(d.stamp)).width + 60; ctx.fillStyle = "rgba(244,236,221,.92)"; rr(-w / 2, -50, w, 100, 14); ctx.fill();
+      ctx.lineWidth = 7; ctx.strokeStyle = P.accent; ctx.stroke(); ctx.fillStyle = P.accent; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(fr(d.stamp), 0, 4); ctx.restore(); });
+    const aR = eOut(seg(lt, 8.6, 9.1)); if (aR <= 0) return;
+    withAlpha(aR, () => {
+      card(990, 150 + (1 - aR) * 40, 800, 670, { r:24 });
+      text(d.newTitle, 1030, 180, { size:40, weight:800, maxW:720, color:P.teal });
+      const cols = 16, rows = 7, cs = 42; const shown = Math.floor(eOut(seg(lt, 8.8, 11)) * cols * rows); const r = rng(5);
+      for (let i = 0; i < cols * rows; i++) { const c = r() < .5 ? P.accent : P.teal; if (i >= shown) continue;
+        envelope(1058 + (i % cols) * cs, 260 + Math.floor(i / cols) * cs, 34, 26, c); }
+      const cnt = Math.round(d.counterTo * eInOut(seg(lt, 8.8, 11.2)));
+      text(cnt.toLocaleString("fr-FR") + " " + d.counterLabel, 1390, 590, { size:52, weight:900, align:"center", maxW:720 });
+      const k = seg(lt, 11.2, 11.9); arrow(1060, 720, 1130, 720, eOut(k), P.teal, 7);
+      withAlpha(k, () => text(d.found, 1150, 698, { size:34, weight:800, maxW:520, min:22, color:P.teal }));
+      check(1730, 718, 40, seg(lt, 11.7, 12.2));
+    });
+  });
+};
+
+// Données d'entraînement fixes pour la frontière (déterministes)
+const TRUE_F = x => .55 + .18 * Math.sin(x * 5.5 - 1) - .25 * (x - .5);
+const BAD_F = x => .2 + .6 * x;
+const NEW_PT = [.86, .87];
+const POINTS = (() => { const r = rng(7), pts = []; while (pts.length < 56) { const x = .04 + r() * .92, y = .05 + r() * .9;
+  if (Math.abs(y - TRUE_F(x)) < .05 || (x > .4 && y > .76) || (x < .3 && y > .86) || (x > .7 && y < .12)) continue; pts.push({ x, y, c:y > TRUE_F(x) ? 1 : 0, d:r() }); } return pts; })();
+const NET = (() => { const r = rng(11), L = [4, 6, 6, 2], edges = [];
+  for (let l = 0; l < L.length - 1; l++) for (let i = 0; i < L[l]; i++) for (let j = 0; j < L[l + 1]; j++) edges.push({ l, i, j, w0:r() * 2 - 1, w1:r() * 2 - 1 });
+  return { L, edges }; })();
+
+VISUALS.training = (lt, s) => {
+  const d = s.data, p = eInOut(seg(lt, 5, 15.3)), training = lt > 5 && lt < 15.6, predict = lt >= 15.5;
+  // colonne d'exemples qui défilent
+  withAlpha(eOut(seg(lt, 0, .5)), () => {
+    ctx.save(); ctx.beginPath(); ctx.rect(90, 150, 380, 690); ctx.clip();
+    const n = d.cards.length, step = 104, off = lt * 58;
+    for (let k = -1; k < 9; k++) { const idx = Math.floor(off / step) + k, y = 150 + k * step - (off % step);
+      const [subj, c] = d.cards[((idx % n) + n) % n];
+      withAlpha(predict ? .15 : 1, () => { card(100, y, 340, 88, { r:14, shadow:5, lw:3 }); envelope(116, y + 26, 48, 34, c ? P.accent : P.teal);
+        text(subj, 176, y + 44, { size:22, weight:700, maxW:170, maxLines:2, min:16, vcenter:true });
+        const lb = d.classes[c ? 0 : 1]; setFont(18, 800); chip(430 - ctx.measureText(lb).width - 24, y + 30, lb, c ? P.accent : P.teal, 18); }); }
+    ctx.restore();
+    const g = ctx.createLinearGradient(0, 150, 0, 230); g.addColorStop(0, P.paper); g.addColorStop(1, "rgba(244,236,221,0)"); ctx.fillStyle = g; ctx.fillRect(90, 146, 380, 84);
+    const g2 = ctx.createLinearGradient(0, 780, 0, 840); g2.addColorStop(0, "rgba(244,236,221,0)"); g2.addColorStop(1, P.paper); ctx.fillStyle = g2; ctx.fillRect(90, 780, 380, 60);
+    if (predict) { const k = popAt(lt, 15.6, .45); scaled(270, 470, k, () => {
+      card(96, 400, 348, 150, { r:16, shadow:8, fill:P.card, stroke:P.sun, lw:6, shadowColor:P.ink });
+      text(d.newLabel, 120, 416, { size:22, weight:800, color:P.muted }); envelope(120, 456, 48, 34, lt > 17.3 ? P.accent : P.ink);
+      text(d.newSubject, 180, 474, { size:24, weight:800, maxW:250, maxLines:2, min:18, vcenter:true }); }); }
+  });
+  // réseau de neurones
+  const netA = lt < 5 ? .45 + .55 * seg(lt, 4.3, 5) : 1, X = [500, 620, 740, 860];
+  const ny = (l, i) => 510 + (i - (NET.L[l] - 1) / 2) * 80;
+  const phase = predict ? seg(lt, 16.4, 17.3) * 1.25 : (lt * 1.25) % 1.25;
+  const glow = l => (training || (predict && lt < 17.6)) ? Math.exp(-Math.pow(l / 3 - phase, 2) / .018) : 0;
+  withAlpha(eOut(seg(lt, 0, .6)) * netA, () => {
+    text(d.netTitle, 680, 190, { size:32, weight:800, align:"center", maxW:420 });
+    for (const e of NET.edges) { const w = lerp(e.w0, e.w1, p), g = Math.max(glow(e.l), glow(e.l + 1)) ;
+      ctx.globalAlpha = (.18 + .55 * Math.abs(w) * (.4 + .6 * g)) * netA; line(X[e.l], ny(e.l, e.i), X[e.l + 1], ny(e.l + 1, e.j), w > 0 ? P.teal : P.accent, 1 + 3.5 * Math.abs(w)); }
+    ctx.globalAlpha = netA;
+    NET.L.forEach((n, l) => { for (let i = 0; i < n; i++) { let g = glow(l) * (.55 + .45 * Math.sin(i * 2.3 + l));
+      if (predict && lt > 17.3 && l === 3) g = i === 0 ? 1 : 0;
+      circle(X[l], ny(l, i), 20, g > .35 ? P.sun : P.card, P.ink, 4); } });
+    text(d.classes[0], 894, ny(3, 0) - 16, { size:26, weight:800, color:P.accent }); text(d.classes[1], 894, ny(3, 1) - 16, { size:26, weight:800, color:P.teal });
+    text(d.netSub, 680, 800, { size:26, weight:650, align:"center", color:P.muted, maxW:420 });
+  });
+  // nuage de points + frontière
+  const bx = 990, by = 235, bw = 790, bh = 585, ix = 1045, iy = 255, iw = 710, ih = 500;
+  const PX = x => ix + x * iw, PY = y => iy + (1 - y) * ih;
+  const bnd = x => lerp(BAD_F(x), TRUE_F(x), p) + (training ? (1 - p) * .05 * Math.sin(lt * 7 + x * 9) : 0);
+  withAlpha(eOut(seg(lt, .2, .8)), () => {
+    card(bx, by, bw, bh, { r:22 });
+    ctx.save(); ctx.beginPath(); ctx.rect(ix, iy, iw, ih); ctx.clip();
+    if (lt > 5) { const ba = seg(lt, 5, 5.6);
+      const path = up => { ctx.beginPath(); ctx.moveTo(ix, up ? iy : iy + ih); for (let k = 0; k <= 60; k++) ctx.lineTo(PX(k / 60), PY(bnd(k / 60))); ctx.lineTo(ix + iw, up ? iy : iy + ih); ctx.closePath(); };
+      ctx.globalAlpha = .14 * ba; path(true); ctx.fillStyle = P.accent; ctx.fill(); path(false); ctx.fillStyle = P.teal; ctx.fill();
+      ctx.globalAlpha = ba; ctx.beginPath(); for (let k = 0; k <= 60; k++) { const x = PX(k / 60), y = PY(bnd(k / 60)); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.strokeStyle = P.ink; ctx.lineWidth = 6; ctx.setLineDash([22, 12]); ctx.lineDashOffset = -lt * 40; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
+    let err = 0;
+    POINTS.forEach((pt, i) => { const k = popAt(lt, .5 + i * .055, .35); if (k <= 0) return; const x = PX(pt.x), y = PY(pt.y);
+      const wrong = lt > 5 && (pt.y > bnd(pt.x) ? 1 : 0) !== pt.c; if (wrong) err++;
+      scaled(x, y, k, () => { circle(x, y, 12, pt.c ? P.accent : P.teal, P.ink, 3);
+        if (wrong) circle(x, y, 21 + Math.sin(lt * 8 + i) * 3, null, P.accent, 3); }); });
+    ctx.restore();
+    const za = seg(p, .6, 1);
+    withAlpha(za, () => { text("zone " + d.classes[0], ix + 16, iy + 12, { size:26, weight:800, color:P.accent }); text("zone " + d.classes[1], ix + iw - 16, iy + ih - 42, { size:26, weight:800, color:P.teal, align:"right" }); });
+    text(d.axisX, ix + iw / 2, 776, { size:24, weight:700, color:P.muted, align:"center" });
+    ctx.save(); ctx.translate(1016, iy + ih / 2); ctx.rotate(-Math.PI / 2); text(d.axisY, 0, -14, { size:24, weight:700, color:P.muted, align:"center" }); ctx.restore();
+    // barre d'entraînement
+    withAlpha(eOut(seg(lt, 4.6, 5.1)), () => {
+      text(d.trainLabel + "  " + Math.round(p * 100) + " %", bx, 150, { size:30, weight:800 });
+      const e = lt > 5 ? Math.round(err / POINTS.length * 100) : 0;
+      text("erreurs : " + e + " %", bx + bw, 150, { size:30, weight:800, align:"right", color:e > 5 ? P.accent : P.teal });
+      ctx.fillStyle = P.soft; rr(bx, 196, bw, 18, 9); ctx.fill(); ctx.fillStyle = P.ink; rr(bx, 196, Math.max(18, bw * p), 18, 9); ctx.fill();
+    });
+    // prédiction
+    if (predict) { const k = eOut(seg(lt, 15.6, 16.3)), nx = PX(NEW_PT[0]), ny2 = lerp(iy - 20, PY(NEW_PT[1]), eBack(k)); const hit = lt > 17.3;
+      circle(nx, ny2, 26, hit ? P.accent : P.ink, P.sun, 6); setFont(30, 900); ctx.fillStyle = P.card; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("?", nx, ny2 + 2);
+      const v = popAt(lt, 17.3, .4); scaled(nx - 180, ny2, v, () => { setFont(30, 900); const tw = ctx.measureText(fr(d.verdict)).width + 40;
+        card(nx - 44 - tw, ny2 - 30, tw, 60, { r:30, fill:P.accent, shadow:5 }); ctx.fillStyle = P.card; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(fr(d.verdict), nx - 44 - tw / 2, ny2 + 2); }); }
+  });
+};
+
+VISUALS.limits = (lt, s, t) => {
+  const d = s.data, a1 = eOut(seg(lt, 0, .5)) * (1 - seg(lt, d.biasAt - .5, d.biasAt));
+  withAlpha(a1, () => {
+    card(130, 180, 790, 460, { r:24 });
+    text(d.prompt, 170, 214, { size:48, weight:800, maxW:710 });
+    d.completions.forEach(([w, pct], i) => { const k = eOut(seg(lt, .8 + i * .3, 1.5 + i * .3)), y = 330 + i * 92;
+      withAlpha(k, () => { text(w, 170, y, { size:38, weight:750, maxW:190 });
+        const bw = 400 * pct / 40 * k; ctx.fillStyle = i ? P.soft : P.teal; rr(380, y + 2, Math.max(bw, 8), 46, 12); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = P.ink; ctx.stroke();
+        text(Math.round(pct * k) + " %", 380 + bw + 16, y + 4, { size:36, weight:800 }); }); });
+    withAlpha(seg(lt, 2.2, 2.8), () => text(d.aside, 525, 690, { size:36, weight:700, color:P.accent, align:"center", maxW:780 }));
+    d.checklist.forEach(([label, ok, at], i) => { const k = eOut(seg(lt, at, at + .4)); if (k <= 0) return; const y = 180 + i * 130 + (1 - k) * 20;
+      withAlpha(k, () => { card(1000, y, 780, 96, { r:18, shadow:6, fill:ok ? "#E4F1EC" : P.card });
+        text(label, 1110, y + 48, { size:38, weight:750, vcenter:true, maxW:640, min:26 });
+        (ok ? check : cross)(1052, y + 48, 38, seg(lt, at + .2, at + .7), ok ? P.teal : P.accent, 9); }); });
+  });
+  const lb = lt - d.biasAt; if (lb < -.1) return;
+  const a2 = eOut(seg(lb, 0, .5));
+  withAlpha(a2, () => {
+    card(130, 180, 680, 540, { r:24 }); text(d.dataTitle, 470, 210, { size:36, weight:800, align:"center", maxW:600 });
+    const minority = new Set([7, 18, 26, 33, 44]);
+    for (let i = 0; i < 50; i++) { const k = popAt(lb, .1 + i * .018, .3), cx = 200 + (i % 10) * 60, cy = 320 + Math.floor(i / 10) * 72;
+      scaled(cx, cy, k, () => person(cx, cy, 46, minority.has(i) ? P.sun : P.teal)); }
+    text(d.dataNote, 470, 650, { size:34, weight:800, align:"center", color:P.teal, maxW:600 });
+    arrow(830, 450, 890, 450, eOut(seg(lb, 1, 1.4)));
+    withAlpha(seg(lb, 1.1, 1.5), () => { card(905, 360, 190, 180, { r:22, fill:P.ink, shadowColor:P.accent });
+      setFont(72, 900); ctx.fillStyle = P.paper; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("IA", 1000, 454); });
+    arrow(1115, 450, 1175, 450, eOut(seg(lb, 1.4, 1.8)));
+    withAlpha(seg(lb, 1.5, 1.9), () => { card(1195, 180, 590, 540, { r:24 }); text(d.outTitle, 1490, 210, { size:36, weight:800, align:"center", maxW:520 });
+      for (let i = 0; i < 5; i++) { const k = popAt(lb, 1.8 + i * .15, .35), cx = 1290 + i * 100; scaled(cx, 400, k, () => person(cx, 400, 80, P.teal)); }
+      text(d.outNote, 1490, 500, { size:32, weight:700, align:"center", maxW:520, color:P.muted }); });
+    const st = popAt(lb, 2.4, .4);
+    scaled(1490, 620, st, () => { ctx.save(); ctx.translate(1490, 620); ctx.rotate(-.08); setFont(64, 900); const w = ctx.measureText(d.stamp).width + 70;
+      ctx.fillStyle = P.accent; rr(-w / 2, -48, w, 96, 14); ctx.fill(); ctx.fillStyle = P.card; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(d.stamp, 0, 4); ctx.restore(); });
+  });
+  // glitch : intermittent sur la sortie, rafale plein écran
+  if (lb > 1.9) { const r = rng(Math.floor(t * 12)); if (r() < .5) glitch(1195, 180, 600, 560, 8 + 24 * seg(lb, 1.9, 3.5), t); }
+  if (lb > 2.4 && lb < 2.75) glitch(0, 130, W, 700, 40, t);
+};
+
+VISUALS.outro = (lt, s) => {
+  const d = s.data;
+  const k1 = popAt(lt, .1, .5); scaled(960, 250, k1, () => text(d.line1, 960, 190, { size:120, weight:900, align:"center", maxW:1700 }));
+  const k2 = popAt(lt, 1.1, .5);
+  scaled(960, 400, k2, () => { const r = text(d.line2, 960, 335, { size:150, weight:900, align:"center", maxW:1700, color:P.accent });
+    setFont(r.size, 900); const w = ctx.measureText(d.line2).width, u = eOut(seg(lt, 1.6, 2.3));
+    if (u > 0) { ctx.globalAlpha = .9; line(960 - w / 2, 510, 960 - w / 2 + w * u, 510, P.sun, 16); ctx.globalAlpha = 1; } });
+  withAlpha(eOut(seg(lt, 3.5, 4.1)), () => text(d.sub, 960, 580 + (1 - eOut(seg(lt, 3.5, 4.1))) * 20, { size:56, weight:750, align:"center", maxW:1500 }));
+  const cw = 300, gap = 110, x0 = 960 - (d.recap.length * cw + (d.recap.length - 1) * gap) / 2;
+  d.recap.forEach((r, i) => { const k = popAt(lt, 5 + i * .3, .4), x = x0 + i * (cw + gap);
+    scaled(x + cw / 2, 745, k, () => { card(x, 705, cw, 80, { r:40, fill:[P.teal, P.sun, P.accent][i % 3], shadow:6 });
+      text(r, x + cw / 2, 749, { size:36, weight:850, align:"center", vcenter:true, maxW:cw - 30, color:i === 1 ? P.ink : P.card }); });
+    if (i) arrow(x - gap + 20, 745, x - 20, 745, eOut(seg(lt, 5 + i * .3, 5.3 + i * .3))); });
+  withAlpha(eOut(seg(lt, 6.2, 6.8)), () => { line(160, 880, 1760, 880, P.soft, 4);
+    text(`${SCRIPT.meta.series} · Épisode ${SCRIPT.meta.episode} · ${SCRIPT.meta.title}`, 160, 910, { size:34, weight:700, color:P.muted, maxW:900 });
+    text(SCRIPT.meta.next, 1760, 910, { size:34, weight:800, color:P.accent, align:"right", maxW:700 }); });
+};
+
+/* =====================================================================
+   4) RENDU + LECTURE
+   ===================================================================== */
+SCRIPT.scenes.forEach((s, i) => s.index = i);
+const sceneAt = t => SCRIPT.scenes.find(s => t < s.end) || SCRIPT.scenes[SCRIPT.scenes.length - 1];
+function render(t) {
+  K = cv.width / W; ctx.setTransform(K, 0, 0, K, 0, 0);
+  const s = sceneAt(t), lt = t - s.start;
+  background(s.index, t);
+  VISUALS[s.visual](lt, s, t);
+  header(s);
+  caption(s, t);
+  transition(t);
+}
+
+let T = 0, playing = false, last = 0, lastKey = "", soundOn = false, audio = null;
+const $ = id => document.getElementById(id);
+function beep(f = 660, d = .09, v = .05, type = "sine") {
+  if (!soundOn) return; audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+  const o = audio.createOscillator(), g = audio.createGain(); o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(v, audio.currentTime); g.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + d);
+  o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + d + .02);
+}
+function fmt(t) { t = Math.floor(t); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); }
+function ui() {
+  $("fill").style.width = (T / DUR * 100) + "%"; $("time").textContent = fmt(T) + " / " + fmt(DUR);
+  $("play").textContent = playing ? "Pause" : (T >= DUR ? "Revoir" : "Lecture");
+  const s = sceneAt(T), { b, i } = beatAt(s, T), key = s.index + ":" + i;
+  if (key !== lastKey) { $("sub").textContent = fr(b.text); if (playing && lastKey) beep(s.index !== +lastKey.split(":")[0] ? 520 : 780); lastKey = key; }
+}
+function frame(now) {
+  if (playing) { const dt = Math.min(.1, (now - last) / 1000); T = Math.min(DUR, T + dt);
+    if (T >= DUR) { playing = false; $("overlayLabel").textContent = "Revoir le cours"; $("overlay").hidden = false; } }
+  last = now; render(T); ui(); if (playing) requestAnimationFrame(frame);
+}
+function play() { if (T >= DUR) T = 0; playing = true; $("overlay").hidden = true; last = performance.now(); requestAnimationFrame(frame); }
+function pause() { playing = false; ui(); }
+function seek(t) { T = Math.max(0, Math.min(DUR, t)); if (!playing) { render(T); ui(); } }
+$("overlay").onclick = play;
+$("play").onclick = () => playing ? pause() : play();
+$("sound").onclick = () => { soundOn = !soundOn; $("sound").textContent = "Son : " + (soundOn ? "on" : "off"); if (soundOn) beep(880, .08); };
+const track = $("track");
+SCRIPT.scenes.slice(1).forEach(s => { const m = document.createElement("div"); m.className = "mark"; m.style.left = (s.start / DUR * 100) + "%"; track.appendChild(m); });
+const seekFromEvent = e => { const r = track.getBoundingClientRect(); seek((e.clientX - r.left) / r.width * DUR); };
+track.addEventListener("pointerdown", e => { track.setPointerCapture(e.pointerId); seekFromEvent(e); $("overlay").hidden = true; });
+track.addEventListener("pointermove", e => { if (e.buttons) seekFromEvent(e); });
+document.addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); playing ? pause() : play(); } });
+function resize() { const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const pw = Math.max(960, Math.min(1920, Math.round(r.width * dpr))) || W; cv.width = pw; cv.height = Math.round(pw * 9 / 16); render(T); }
+window.addEventListener("resize", resize);
+// Hook de vérification : window.__seek(t) fige l'image à t secondes ; ?t=12 dans l'URL fait pareil.
+window.__seek = t => { playing = false; $("overlay").hidden = true; seek(t); };
+const q = new URLSearchParams(location.search).get("t");
+resize(); if (q != null) window.__seek(parseFloat(q)); else { render(0.6); ui(); }
+</script>
+</body>
+</html>
